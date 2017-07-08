@@ -7,8 +7,7 @@ const error = jsDebug('app:error');
 
 const program = require('commander');
 const path = require('path');
-const fs = require('async-file');
-const fsExtra = require('fs-extra');
+const fs = require('fs-extra');
 const XLSX = require('xlsx');
 
 
@@ -114,7 +113,7 @@ const cleanPhoto = async (worksheetJson) => {
             try {
                 if(program.copy) {
                     info(`copy ${matchFile} to ${destinationFile}`);
-                    !program.test && await fsExtra.copy(matchFile, destinationFile);
+                    !program.test && await fs.copy(matchFile, destinationFile);
                 }
                 else {
                     info(`move ${matchFile} to ${destinationFile}`);
