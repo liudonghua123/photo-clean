@@ -9,7 +9,10 @@ const program = require('commander');
 const path = require('path');
 const fs = require('fs-extra');
 const XLSX = require('xlsx');
+const sprintf = require('sprintf-js').sprintf;
 
+const defaultInputPattern = "%(xh)s.jpg|%(bmh)s.jpg|%(sfzh)s.jpg|10673_17_%(bmh)s.jpg|%(ksbh)s.jpg";
+const defaultDestinationPattern = "%(xh)s.jpg";
 
 const isFileExists = async (file) => {
     try {
@@ -26,6 +29,8 @@ const parseArgs = () => {
         .option('-s, --source <source>', 'XLSX data file')
         .option('-i, --inputDir <inputDir>', 'Directory of input files')
         .option('-o, --outputDir [outputDir]', 'Directory of output files')
+        .option('-p, --patterns <patterns>', `Default input Pattern: ${defaultInputPattern}`)
+        .option('-d, --destinationPattern <destinationPattern>', `Default output Pattern ${defaultDestinationPattern}`)
         .option('-c, --copy', 'Copy if needed')
         .option('-t, --test', 'Test only')
         .parse(process.argv);
@@ -55,16 +60,25 @@ const validateArgs = async (program) => {
             }
         }
     }
-    const sourceExists = await isFileExists(program.source)
+    const sourceExists = await isFileExists(program.source);
     if(!sourceExists) {
         error(`excel file is not accessable!`);
         process.exit(1);
     }
-    const inputDirExists = await isFileExists(program.inputDir)
+    const inputDirExists = await isFileExists(program.inputDir);
     if(!inputDirExists) {
         error(`intput directory is not accessable!`);
         process.exit(1);
     }
+    if(!program.patterns) {
+        info(`input patterns use default ${defaultInputPattern}`);
+        program.patterns = `${defaultInputPattern}`;
+    }
+    if(!program.destinationPattern) {
+        info(`destination pattern use default ${defaultDestinationPattern}`);
+        program.destinationPattern = `${defaultDestinationPattern}`;
+    }
+    program.pattern = program.patterns.split('|');
     program.copy = !!program.copy;
     program.test = !!program.test;
     info(`Program arguments is:\nsource: ${program.source}\ninputDir: ${program.inputDir}\noutputDir: ${program.outputDir}\ncopy: ${program.copy}\ntest: ${program.test}`);
@@ -83,33 +97,25 @@ const parseXLSX = () => {
 const cleanPhoto = async (worksheetJson) => {
     try {
         for(const {学号: xh, 报名号: bmh, 考生编号: ksbh, 身份证号: sfzh, 姓名: xm} of worksheetJson) {
-            // bmh
-            const bmhFileTry = path.resolve(program.inputDir, bmh + '.jpg');
-            const sfzhFileTry = path.resolve(program.inputDir, sfzh + '.jpg');
-            const bmhFile2Try = path.resolve(program.inputDir, '10673_17_' + bmh + '.jpg');
-            const ksbhFileTry = path.resolve(program.inputDir, ksbh + '.jpg');
+            const data = {xh,bmh,ksbh,sfzh,xm};
+
             let matchFile = null;
-            const destinationFile = path.resolve(program.outputDir, xh + '.jpg');
-            // bmh
-            if(await isFileExists(`${bmhFileTry}`)) {
-                matchFile = bmhFileTry;
+            const destinationFile = path.resolve(program.outputDir, sprintf(program.destinationPattern, data));
+            const tryFiles = program.pattern.map((p) => {
+                return path.resolve(program.inputDir, sprintf(p, data));
+            });
+
+            for(const tryFile of tryFiles) {
+                if(await isFileExists(`${tryFile}`)) {
+                    matchFile = tryFile;
+                    break;
+                }
             }
-            // sfzh
-            else if(await isFileExists(`${sfzhFileTry}`)) {
-                matchFile = sfzhFileTry;
-            }
-            // 10673_17_bmh
-            else if(await isFileExists(`${bmhFile2Try}`)) {
-                matchFile = bmhFile2Try;
-            }
-            // ksbh
-            else if(await isFileExists(`${ksbhFileTry}`)) {
-                matchFile = ksbhFileTry;
-            }
-            else {
+            if(!matchFile) {
                 warn(`The photo of ${xh}/${xm} not found!`);
                 continue;
             }
+
             try {
                 if(program.copy) {
                     info(`copy ${matchFile} to ${destinationFile}`);
