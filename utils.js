@@ -40,11 +40,11 @@ const parseArgs = () => {
 const validateArgs = async (program) => {
     if(!program.source) {
         error(`source file should specified!`);
-        process.exit(1);
+        process.exitCode = 1;
     }
     if(!program.inputDir) {
         error(`input directory should specified!`);
-        process.exit(1);
+        process.exitCode = 1;
     }
     if(!program.outputDir) {
         program.outputDir = `${program.inputDir}-clean`;
@@ -56,19 +56,19 @@ const validateArgs = async (program) => {
             }
             catch (err) {
                 error(`create ${program.outputDir} error!\n${err.stack}`);
-                process.exit(1);
+                process.exitCode = 1;
             }
         }
     }
     const sourceExists = await isFileExists(program.source);
     if(!sourceExists) {
         error(`excel file is not accessable!`);
-        process.exit(1);
+        process.exitCode = 1;
     }
     const inputDirExists = await isFileExists(program.inputDir);
     if(!inputDirExists) {
         error(`intput directory is not accessable!`);
-        process.exit(1);
+        process.exitCode = 1;
     }
     if(!program.patterns) {
         info(`input patterns use default ${defaultInputPattern}`);
@@ -134,7 +134,7 @@ const cleanPhoto = async (worksheetJson) => {
     }
     catch(err) {
         error(`${err.stack}`);
-        process.exit(1);
+        process.exitCode = 1;
     }
 };
 
